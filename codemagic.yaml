@@ -1,98 +1,103 @@
-workflows: ios-hotspot-plus-unsigned: name: HOTSPOT PLUS iOS Unsigned IPA instance_type: mac_mini_m2 max_build_duration: 60
-environment:
-  node: 22
-  xcode: latest
-  cocoapods: default
+workflows:
+  ios-hotspot-plus-unsigned:
+    name: HOTSPOT PLUS iOS Unsigned IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 60
 
-  vars:
-    BUNDLE_ID: "com.hotspotplus.app"
-    APP_NAME: "HOTSPOT PLUS"
+    environment:
+      node: 22
+      xcode: latest
+      cocoapods: default
 
-scripts:
-  - name: Check Node.js version
-    script: |
-      node --version
-      npm --version
+      vars:
+        BUNDLE_ID: "com.hotspotplus.app"
+        APP_NAME: "HOTSPOT PLUS"
 
-  - name: Install npm dependencies
-    script: |
-      npm install --legacy-peer-deps
+    scripts:
+      - name: Check Node.js version
+        script: |
+          node --version
+          npm --version
 
-  - name: Build Web Application
-    script: |
-      npm run build
+      - name: Install npm dependencies
+        script: |
+          npm install --legacy-peer-deps
 
-  - name: Capacitor Sync iOS
-    script: |
-      npx cap sync ios
+      - name: Build Web Application
+        script: |
+          npm run build
 
-  - name: Fix iOS Storyboards
-    script: |
-      set -e
-      mkdir -p ios/App/App/Base.lproj
+      - name: Capacitor Sync iOS
+        script: |
+          npx cap sync ios
 
-      if [ -f "ios/App/App/LaunchScreen.storyboard" ]; then
-        cp "ios/App/App/LaunchScreen.storyboard" "ios/App/App/Base.lproj/LaunchScreen.storyboard"
-      fi
+      - name: Fix iOS Storyboards
+        script: |
+          set -e
+          mkdir -p ios/App/App/Base.lproj
 
-      if [ -f "ios/App/App/Main.storyboard" ]; then
-        cp "ios/App/App/Main.storyboard" "ios/App/App/Base.lproj/Main.storyboard"
-      fi
+          if [ -f "ios/App/App/LaunchScreen.storyboard" ]; then
+            cp "ios/App/App/LaunchScreen.storyboard" "ios/App/App/Base.lproj/LaunchScreen.storyboard"
+          fi
 
-      ls -la ios/App/App/Base.lproj
+          if [ -f "ios/App/App/Main.storyboard" ]; then
+            cp "ios/App/App/Main.storyboard" "ios/App/App/Base.lproj/Main.storyboard"
+          fi
 
-  - name: Install CocoaPods dependencies
-    script: |
-      cd ios/App
-      pod install
+          ls -la ios/App/App/Base.lproj
 
-  - name: Archive iOS app without code signing
-    script: |
-      set -e
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
 
-      rm -rf build
-      mkdir -p build/ios/ipa
+      - name: Archive iOS app without code signing
+        script: |
+          set -e
 
-      xcodebuild archive \
-        -workspace "ios/App/App.xcworkspace" \
-        -scheme "App" \
-        -configuration Release \
-        -archivePath "$PWD/build/App.xcarchive" \
-        CODE_SIGNING_ALLOWED=NO \
-        CODE_SIGNING_REQUIRED=NO \
-        CODE_SIGN_IDENTITY=""
+          rm -rf build
+          mkdir -p build/ios/ipa
 
-  - name: Package unsigned IPA
-    script: |
-      set -e
+          xcodebuild archive \
+            -workspace "ios/App/App.xcworkspace" \
+            -scheme "App" \
+            -configuration Release \
+            -archivePath "$PWD/build/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
 
-      APP_PATH="build/App.xcarchive/Products/Applications/App.app"
+      - name: Package unsigned IPA
+        script: |
+          set -e
 
-      test -d "$APP_PATH"
+          APP_PATH="build/App.xcarchive/Products/Applications/App.app"
 
-      rm -rf build/ios/ipa/Payload
-      mkdir -p build/ios/ipa/Payload
+          test -d "$APP_PATH"
 
-      cp -R "$APP_PATH" build/ios/ipa/Payload/
+          rm -rf build/ios/ipa/Payload
+          mkdir -p build/ios/ipa/Payload
 
-      cd build/ios/ipa
+          cp -R "$APP_PATH" build/ios/ipa/Payload/
 
-      zip -qry "HOTSPOT-PLUS-unsigned.ipa" Payload
+          cd build/ios/ipa
 
-      rm -rf Payload
+          zip -qry "HOTSPOT-PLUS-unsigned.ipa" Payload
 
-      ls -lh HOTSPOT-PLUS-unsigned.ipa
+          rm -rf Payload
 
-artifacts:
-  - build/ios/ipa/*.ipa
-  - build/App.xcarchive/dSYMs/**/*.dSYM
-  - /tmp/xcodebuild_logs/*.log
-  - $HOME/Library/Logs/*.log
+          ls -lh HOTSPOT-PLUS-unsigned.ipa
 
-publishing:
-  email:
-    recipients:
-      - mjrmiky@gmail.com
-    notify:
-      success: true
-      failure: true
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/App.xcarchive/dSYMs/**/*.dSYM
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - mjrmiky@gmail.com
+        notify:
+          success: true
+          failure: true
