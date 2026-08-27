@@ -1,0 +1,62 @@
+workflows:
+  ios-hotspot-plus-unsigned:
+    name: HOTSPOT PLUS iOS Unsigned IPA
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: "com.hotspotplus.app"
+        APP_NAME: "HOTSPOT PLUS"
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install --legacy-peer-deps
+      - name: Build Web Application
+        script: |
+          npm run build
+      - name: Capacitor Sync iOS
+        script: |
+          npx cap sync ios
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+      - name: Archive iOS app without code signing
+        script: |
+          set -e
+          rm -rf build ios/App/build
+          mkdir -p build/ios/ipa
+          xcodebuild archive \
+            -workspace "ios/App/App.xcworkspace" \
+            -scheme "App" \
+            -configuration Release \
+            -archivePath "$PWD/build/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      - name: Package unsigned IPA
+        script: |
+          set -e
+          APP_PATH="build/App.xcarchive/Products/Applications/App.app"
+          test -d "$APP_PATH"
+          rm -rf build/ios/ipa/Payload
+          mkdir -p build/ios/ipa/Payload
+          cp -R "$APP_PATH" build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -qry "HOTSPOT-PLUS-unsigned.ipa" Payload
+          rm -rf Payload
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/App.xcarchive/dSYMs/**/*.dSYM
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Logs/*.log
+    publishing:
+      email:
+        recipients:
+          - mjrmiky@gmail.com
+        notify:
+          success: true
+          failure: true
