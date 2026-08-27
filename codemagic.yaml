@@ -1,4 +1,4 @@
-workflows: ios-hotspot-plus-unsigned: name: HOTSPOT PLUS iOS Unsigned IPA instance_type: mac_mini_m1 max_build_duration: 60
+workflows: ios-hotspot-plus-unsigned: name: HOTSPOT PLUS iOS Unsigned IPA instance_type: mac_mini_m2 max_build_duration: 60
 environment:
   node: 22
   xcode: latest
@@ -29,20 +29,16 @@ scripts:
   - name: Fix iOS Storyboards
     script: |
       set -e
-
       mkdir -p ios/App/App/Base.lproj
 
       if [ -f "ios/App/App/LaunchScreen.storyboard" ]; then
-        cp "ios/App/App/LaunchScreen.storyboard" \
-           "ios/App/App/Base.lproj/LaunchScreen.storyboard"
+        cp "ios/App/App/LaunchScreen.storyboard" "ios/App/App/Base.lproj/LaunchScreen.storyboard"
       fi
 
       if [ -f "ios/App/App/Main.storyboard" ]; then
-        cp "ios/App/App/Main.storyboard" \
-           "ios/App/App/Base.lproj/Main.storyboard"
+        cp "ios/App/App/Main.storyboard" "ios/App/App/Base.lproj/Main.storyboard"
       fi
 
-      echo "Checking storyboard files..."
       ls -la ios/App/App/Base.lproj
 
   - name: Install CocoaPods dependencies
@@ -55,8 +51,6 @@ scripts:
       set -e
 
       rm -rf build
-      rm -rf ios/App/build
-
       mkdir -p build/ios/ipa
 
       xcodebuild archive \
@@ -74,13 +68,9 @@ scripts:
 
       APP_PATH="build/App.xcarchive/Products/Applications/App.app"
 
-      if [ ! -d "$APP_PATH" ]; then
-        echo "ERROR: App.app was not found."
-        exit 1
-      fi
+      test -d "$APP_PATH"
 
       rm -rf build/ios/ipa/Payload
-
       mkdir -p build/ios/ipa/Payload
 
       cp -R "$APP_PATH" build/ios/ipa/Payload/
@@ -90,10 +80,6 @@ scripts:
       zip -qry "HOTSPOT-PLUS-unsigned.ipa" Payload
 
       rm -rf Payload
-
-      echo "======================================"
-      echo "Unsigned IPA created successfully!"
-      echo "======================================"
 
       ls -lh HOTSPOT-PLUS-unsigned.ipa
 
